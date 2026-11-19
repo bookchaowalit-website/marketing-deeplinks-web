@@ -13,7 +13,8 @@ let root: Root;
 let host: HTMLDivElement;
 const $ = (selector: string) => host.querySelector(selector) as HTMLElement | null;
 const button = (text: string) => [...host.querySelectorAll("button")].find((b) => (b.getAttribute("aria-label") ?? b.textContent?.trim())?.startsWith(text)) as HTMLButtonElement;
-const press = (el: Element) => act(() => { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+// detail 0 = keyboard (Enter/Space) click, 1 = pointer click.
+const press = (el: Element, detail = 1) => act(() => { el.dispatchEvent(new MouseEvent("click", { bubbles: true, detail })); });
 const rows = () => [...host.querySelectorAll(".as-row h3")].map((h) => h.textContent);
 const mount = () => act(() => root.render(<Home />));
 const type = (input: HTMLInputElement, value: string) => act(() => {
@@ -95,6 +96,60 @@ describe("deep links", () => {
     press(button("Remove Share note"));
     act(() => { vi.advanceTimersByTime(6000); });
     expect($(".as-toast")).toBeNull();
+  });
+
+  it("removals inside the Undo window form one batch; Undo restores every link in place", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([
+      ...SEED,
+      { id: "third", title: "Third", url: "app://third", status: "Done", createdAt: 1 },
+    ]));
+    mount();
+    const before = rows();
+    expect(before).toHaveLength(3);
+    press(button(`Remove ${before[1]}`));
+    act(() => { vi.advanceTimersByTime(4000); });
+    press(button(`Remove ${before[0]}`));
+    expect(rows()).toEqual([before[2]]);
+    expect($(".as-toast span")?.textContent).toBe("Removed 2 links");
+    expect(button("Undo").getAttribute("aria-label")).toBe("Undo remove of 2 links");
+    // The second removal restarted the 6 s window: 4 s later it is still open.
+    act(() => { vi.advanceTimersByTime(4000); });
+    press(button("Undo"));
+    expect(rows()).toEqual(before);
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]")).toHaveLength(3);
+    expect($('[role="status"]')?.textContent).toBe("Restored 2 links.");
+    expect($(".as-toast")).toBeNull();
+  });
+
+  it("keyboard removal focuses Undo; Undo focuses the restored link, Escape the next one", () => {
+    mount();
+    press(button("Remove Open project"), 0);
+    expect(document.activeElement).toBe(button("Undo remove"));
+    press(button("Undo remove"), 0);
+    expect(rows()).toEqual(["Open project", "Share note"]);
+    expect(document.activeElement).toBe(button("Remove Open project"));
+    press(button("Remove Open project"), 0);
+    act(() => { $(".as-toast")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+    expect($(".as-toast")).toBeNull();
+    expect(document.activeElement).toBe(button("Remove Share note"));
+    // Nothing left to land on: New link.
+    press(button("Remove Share note"), 0);
+    act(() => { $(".as-toast")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+    expect(document.activeElement).toBe(button("New link"));
+  });
+
+  it("keeps a focused toast open and reserves its height while it shows", () => {
+    vi.useFakeTimers();
+    mount();
+    press(button("Remove Open project"), 0);
+    expect(document.documentElement.style.getPropertyValue("--as-toast-space")).toMatch(/px$/);
+    act(() => { vi.advanceTimersByTime(7000); });
+    expect($(".as-toast")).not.toBeNull();
+    act(() => { button("New link").focus(); });
+    act(() => { vi.advanceTimersByTime(6000); });
+    expect($(".as-toast")).toBeNull();
+    expect(document.documentElement.style.getPropertyValue("--as-toast-space")).toBe("");
   });
 
   it("tells an empty registry from a search with no match", () => {
