@@ -9,8 +9,9 @@ import { createLocalStore } from "@/lib/local-store";
 const store = createLocalStore(STORAGE_KEY, SEED, parseRoutes);
 const TONE: Record<Status, Tone> = { Draft: "amber", Active: "green", Done: "grey" };
 type Filter = "All" | Status;
-// index: where it sat in the stored list when removed. nextShown / prevShown: the rows shown around it, for focus.
-type RemovedEntry = { route: Route; index: number; nextShown?: string; prevShown?: string };
+// index / prevId / nextId: where it sat in the stored list when removed (restoreRoute prefers the neighbours).
+// nextShown / prevShown: the rows shown around it, for focus.
+type RemovedEntry = { route: Route; index: number; prevId?: string; nextId?: string; nextShown?: string; prevShown?: string };
 type RemovedBatch = { items: RemovedEntry[]; viaKeyboard: boolean };
 const removedLabel = (items: RemovedEntry[]) => (items.length === 1 ? `Removed “${items[0].route.title}”` : `Removed ${items.length} links`);
 
@@ -119,7 +120,7 @@ export default function Home() {
     if (index < 0) return;
     store.set(removeRoute(current, route.id));
     const shownAt = visible.findIndex((item) => item.id === route.id);
-    const entry: RemovedEntry = { route: current[index], index, nextShown: visible[shownAt + 1]?.id, prevShown: shownAt > 0 ? visible[shownAt - 1].id : undefined };
+    const entry: RemovedEntry = { route: current[index], index, prevId: current[index - 1]?.id, nextId: current[index + 1]?.id, nextShown: visible[shownAt + 1]?.id, prevShown: shownAt > 0 ? visible[shownAt - 1].id : undefined };
     const items = [...(removedRef.current?.items ?? []), entry];
     setRemoved({ items, viaKeyboard });
     setAnnouncement(`${removedLabel(items)}. Undo is available for a few seconds.`);
@@ -137,7 +138,7 @@ export default function Home() {
     const items = removedRef.current?.items;
     if (!items?.length) return;
     // Latest removal first, so each index refers to the list as it was just before that removal.
-    store.update((current) => items.reduceRight((list, { route, index }) => restoreRoute(list, route, index), current));
+    store.update((current) => items.reduceRight((list, { route, index, prevId, nextId }) => restoreRoute(list, route, index, { prevId, nextId }), current));
     setAnnouncement(items.length === 1 ? `Restored “${items[0].route.title}”.` : `Restored ${items.length} links.`);
     // Undone: back to the restored row (the latest one, where the user was last).
     closeToast([items[items.length - 1].route.id]);

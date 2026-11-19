@@ -58,9 +58,18 @@ export function parseRoutes(raw: string): Route[] | null {
   }
 }
 
-/** Puts a removed route back at its old position (Undo); a route with the same id already back stays single. */
-export function restoreRoute(routes: Route[], route: Route, index: number): Route[] {
+/** The ids around a route in the stored list when it was removed, so Undo can find its place again. */
+export type Neighbours = { prevId?: string; nextId?: string };
+
+/**
+ * Puts a removed route back at its old position (Undo); a route with the same id already back stays single.
+ * The place is found from its neighbours when they are still listed (links added meanwhile go on top and
+ * would shift a bare index), else from the old index.
+ */
+export function restoreRoute(routes: Route[], route: Route, index: number, neighbours: Neighbours = {}): Route[] {
   if (routes.some((item) => item.id === route.id)) return routes;
-  const at = Math.max(0, Math.min(index, routes.length));
+  const prevAt = neighbours.prevId ? routes.findIndex((item) => item.id === neighbours.prevId) : -1;
+  const nextAt = neighbours.nextId ? routes.findIndex((item) => item.id === neighbours.nextId) : -1;
+  const at = prevAt >= 0 ? prevAt + 1 : nextAt >= 0 ? nextAt : Math.max(0, Math.min(index, routes.length));
   return [...routes.slice(0, at), route, ...routes.slice(at)];
 }

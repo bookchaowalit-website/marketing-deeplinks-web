@@ -64,4 +64,13 @@ describe("restoreRoute", () => {
     expect(restoreRoute([second], first, 9)).toEqual([second, first]);
     expect(restoreRoute([first, second], first, 0)).toEqual([first, second]);
   });
+
+  it("prefers the old neighbours over the old index", () => {
+    const r = (id: string) => ({ ...SEED[0], id, title: id });
+    const [x, a, b, c] = [r("x"), r("a"), r("b"), r("c")];
+    // B sat at index 1 between A and C; X was added on top meanwhile.
+    expect(restoreRoute([x, a, c], b, 1, { prevId: "a", nextId: "c" })).toEqual([x, a, b, c]);
+    expect(restoreRoute([x, c], b, 1, { prevId: "a", nextId: "c" })).toEqual([x, b, c]);
+    expect(restoreRoute([x], b, 1, { prevId: "a", nextId: "c" })).toEqual([x, b]);
+  });
 });

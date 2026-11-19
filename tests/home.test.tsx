@@ -98,6 +98,22 @@ describe("deep links", () => {
     expect($(".as-toast")).toBeNull();
   });
 
+  it("Undo puts a link back between its old neighbours even after a link was added on top meanwhile", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([
+      { id: "a", title: "A", url: "app://a", status: "Active", createdAt: 3 },
+      { id: "b", title: "B", url: "app://b", status: "Active", createdAt: 2 },
+      { id: "c", title: "C", url: "app://c", status: "Active", createdAt: 1 },
+    ]));
+    mount();
+    press(button("Remove B"));
+    press(button("New link"));
+    type(field("Name"), "X");
+    type(field("Deep link URL"), "app://x");
+    act(() => { ($("form.as-composer") as HTMLFormElement).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    press(button("Undo remove"));
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]").map((r: { title: string }) => r.title)).toEqual(["X", "A", "B", "C"]);
+  });
+
   it("removals inside the Undo window form one batch; Undo restores every link in place", () => {
     vi.useFakeTimers();
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify([
