@@ -58,18 +58,24 @@ export function parseRoutes(raw: string): Route[] | null {
   }
 }
 
-/** The ids around a route in the stored list when it was removed, so Undo can find its place again. */
-export type Neighbours = { prevId?: string; nextId?: string };
+/**
+ * The ids around a route in the stored list when it was removed, so Undo can find its place again, and when it was
+ * removed: links created after that went on top, so they shift the old index.
+ */
+export type Neighbours = { prevId?: string; nextId?: string; removedAt?: number };
 
 /**
  * Puts a removed route back at its old position (Undo); a route with the same id already back stays single.
  * The place is found from its neighbours when they are still listed (links added meanwhile go on top and
- * would shift a bare index), else from the old index.
+ * would shift a bare index), else from the old index counted below the links added on top since the removal.
  */
 export function restoreRoute(routes: Route[], route: Route, index: number, neighbours: Neighbours = {}): Route[] {
   if (routes.some((item) => item.id === route.id)) return routes;
   const prevAt = neighbours.prevId ? routes.findIndex((item) => item.id === neighbours.prevId) : -1;
   const nextAt = neighbours.nextId ? routes.findIndex((item) => item.id === neighbours.nextId) : -1;
-  const at = prevAt >= 0 ? prevAt + 1 : nextAt >= 0 ? nextAt : Math.max(0, Math.min(index, routes.length));
+  let addedOnTop = 0;
+  const { removedAt } = neighbours;
+  if (removedAt !== undefined) while (addedOnTop < routes.length && routes[addedOnTop].createdAt > removedAt) addedOnTop += 1;
+  const at = prevAt >= 0 ? prevAt + 1 : nextAt >= 0 ? nextAt : Math.max(0, Math.min(index + addedOnTop, routes.length));
   return [...routes.slice(0, at), route, ...routes.slice(at)];
 }

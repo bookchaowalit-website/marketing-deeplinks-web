@@ -73,4 +73,15 @@ describe("restoreRoute", () => {
     expect(restoreRoute([x, c], b, 1, { prevId: "a", nextId: "c" })).toEqual([x, b, c]);
     expect(restoreRoute([x], b, 1, { prevId: "a", nextId: "c" })).toEqual([x, b]);
   });
+
+  it("keeps links added after deleting everything on top when Undo has no neighbours left", () => {
+    const r = (id: string, createdAt: number) => ({ ...SEED[0], id, title: id, createdAt });
+    const [a, b, x] = [r("a", 1), r("b", 2), r("x", 200)];
+    // [A, B]: A removed at t=100 (next B), then B at t=100 (no neighbours); X added at t=200; Undo restores B then A.
+    const afterB = restoreRoute([x], b, 0, { removedAt: 100 });
+    expect(afterB).toEqual([x, b]);
+    expect(restoreRoute(afterB, a, 0, { nextId: "b", removedAt: 100 })).toEqual([x, a, b]);
+    // Without a removal time the old index still applies.
+    expect(restoreRoute([x], b, 0)).toEqual([b, x]);
+  });
 });

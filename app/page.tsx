@@ -9,9 +9,10 @@ import { createLocalStore } from "@/lib/local-store";
 const store = createLocalStore(STORAGE_KEY, SEED, parseRoutes);
 const TONE: Record<Status, Tone> = { Draft: "amber", Active: "green", Done: "grey" };
 type Filter = "All" | Status;
-// index / prevId / nextId: where it sat in the stored list when removed (restoreRoute prefers the neighbours).
+// index / prevId / nextId: where it sat in the stored list when removed (restoreRoute prefers the neighbours);
+// removedAt: links created later went on top, so a bare index is counted below them.
 // nextShown / prevShown: the rows shown around it, for focus.
-type RemovedEntry = { route: Route; index: number; prevId?: string; nextId?: string; nextShown?: string; prevShown?: string };
+type RemovedEntry = { route: Route; index: number; prevId?: string; nextId?: string; removedAt: number; nextShown?: string; prevShown?: string };
 type RemovedBatch = { items: RemovedEntry[]; viaKeyboard: boolean };
 const removedLabel = (items: RemovedEntry[]) => (items.length === 1 ? `Removed “${items[0].route.title}”` : `Removed ${items.length} links`);
 
@@ -19,6 +20,9 @@ function createId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
   return `link-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
+
+// Read from an event handler; a module function keeps the React Compiler purity check off the clock read.
+const removalTime = () => Date.now();
 
 export default function Home() {
   const routes = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getServerSnapshot);
@@ -120,7 +124,7 @@ export default function Home() {
     if (index < 0) return;
     store.set(removeRoute(current, route.id));
     const shownAt = visible.findIndex((item) => item.id === route.id);
-    const entry: RemovedEntry = { route: current[index], index, prevId: current[index - 1]?.id, nextId: current[index + 1]?.id, nextShown: visible[shownAt + 1]?.id, prevShown: shownAt > 0 ? visible[shownAt - 1].id : undefined };
+    const entry: RemovedEntry = { route: current[index], index, prevId: current[index - 1]?.id, nextId: current[index + 1]?.id, removedAt: removalTime(), nextShown: visible[shownAt + 1]?.id, prevShown: shownAt > 0 ? visible[shownAt - 1].id : undefined };
     const items = [...(removedRef.current?.items ?? []), entry];
     setRemoved({ items, viaKeyboard });
     setAnnouncement(`${removedLabel(items)}. Undo is available for a few seconds.`);
@@ -138,7 +142,7 @@ export default function Home() {
     const items = removedRef.current?.items;
     if (!items?.length) return;
     // Latest removal first, so each index refers to the list as it was just before that removal.
-    store.update((current) => items.reduceRight((list, { route, index, prevId, nextId }) => restoreRoute(list, route, index, { prevId, nextId }), current));
+    store.update((current) => items.reduceRight((list, { route, index, prevId, nextId, removedAt }) => restoreRoute(list, route, index, { prevId, nextId, removedAt }), current));
     setAnnouncement(items.length === 1 ? `Restored “${items[0].route.title}”.` : `Restored ${items.length} links.`);
     // Undone: back to the restored row (the latest one, where the user was last).
     closeToast([items[items.length - 1].route.id]);
@@ -235,7 +239,7 @@ export default function Home() {
                 <>
                   <strong>No links yet</strong>
                   Press New link to add the first one, or bring back the two examples.
-                  <div className="dl-empty-actions"><button type="button" className="as-plain" onClick={() => store.set(SEED)}>Restore examples</button></div>
+                  <div className="dl-empty-actions"><button type="button" className="as-plain" onClick={() => { store.set(SEED); setFilter("All"); }}>Restore examples</button></div>
                 </>
               ) : (
                 <><strong>This list is empty</strong>No link is {title} yet. Press New link and pick {title} as the state to add one.</>

@@ -172,6 +172,8 @@ describe("deep links", () => {
     window.localStorage.setItem(STORAGE_KEY, "[]");
     mount();
     expect($(".as-empty")?.textContent).toContain("No links yet");
+    // From the Done list the examples (Active and Draft) would stay hidden: Restore switches to All links.
+    press(button("Done"));
     press(button("Restore examples"));
     expect(rows()).toHaveLength(SEED.length);
     type(host.querySelector('input[type="search"]') as HTMLInputElement, "zzz");
