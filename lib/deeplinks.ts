@@ -57,3 +57,10 @@ export function parseRoutes(raw: string): Route[] | null {
     return null;
   }
 }
+
+/** Puts a removed route back at its old position (Undo); a route with the same id already back stays single. */
+export function restoreRoute(routes: Route[], route: Route, index: number): Route[] {
+  if (routes.some((item) => item.id === route.id)) return routes;
+  const at = Math.max(0, Math.min(index, routes.length));
+  return [...routes.slice(0, at), route, ...routes.slice(at)];
+}

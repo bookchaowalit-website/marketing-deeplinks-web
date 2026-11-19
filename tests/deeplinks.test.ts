@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_DRAFT, SEED, addRoute, filterRoutes, parseRoutes, removeRoute } from "@/lib/deeplinks";
+import { EMPTY_DRAFT, SEED, addRoute, filterRoutes, parseRoutes, removeRoute, restoreRoute } from "@/lib/deeplinks";
 
 describe("filterRoutes", () => {
   it("returns every route for an empty query", () => {
@@ -54,5 +54,14 @@ describe("parseRoutes", () => {
     expect(parseRoutes("{}")).toBeNull();
     expect(parseRoutes(JSON.stringify([{ id: "1", title: "A", url: 3, status: "Draft", createdAt: 1 }]))).toBeNull();
     expect(parseRoutes(JSON.stringify([{ id: "1", title: "A", url: "a://", status: "Gone", createdAt: 1 }]))).toBeNull();
+  });
+});
+
+describe("restoreRoute", () => {
+  it("puts a removed route back at its old place, once", () => {
+    const [first, second] = SEED;
+    expect(restoreRoute([second], first, 0)).toEqual([first, second]);
+    expect(restoreRoute([second], first, 9)).toEqual([second, first]);
+    expect(restoreRoute([first, second], first, 0)).toEqual([first, second]);
   });
 });

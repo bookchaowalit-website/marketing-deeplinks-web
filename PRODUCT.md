@@ -26,9 +26,9 @@ A portfolio visitor, or a developer jotting down which app routes should be addr
 ## What does not work (and must not be claimed)
 
 - No platform templates (iOS/Android/web), no QR code generation, no URL format validation.
-- Nothing opens, resolves or redirects a link; the network drawing is decoration ("not a live app router").
-- The "LINK MAP 07" badge is decorative, not a count. No accounts, sync or analytics beyond Vercel Analytics and Speed
-  Insights on this page itself.
+- Nothing opens, resolves or redirects a link ("not a live app router"). The decorative network drawing and the
+  "LINK MAP 07" badge were removed with the App shell move (2026-11-19).
+- No accounts, sync or analytics (Vercel Analytics and Speed Insights were removed 2026-11-19).
 
 ## Live URL and deploy state
 

@@ -41,4 +41,6 @@ scan on every push and PR to `main`.
   routes.
 - `lib/sentry.ts` + `instrumentation*.ts`: error reporting to Sentry, errors only, personal data stripped; off when
   `NEXT_PUBLIC_SENTRY_DSN` is unset.
-- `app/more-projects/page.tsx`: shared portfolio link page (copied per repository, not a package).
+- `/more-projects` is a permanent (308) redirect to https://bookchaowalit.com/ (`next.config.ts`); the footer links there too.
+- `lib/site.ts` + `app/robots.ts` + `app/sitemap.ts`: canonical origin https://deeplinks.bookchaowalit.com (override with `NEXT_PUBLIC_SITE_URL`).
+- `app/app-shell.css`, `components/app-shell.tsx`: the shared App shell, copied in (see `APP-SHELL.md`).
