@@ -181,4 +181,13 @@ describe("deep links", () => {
     press(button("Clear search"));
     expect(rows()).toHaveLength(2);
   });
+
+  it("Restore examples keeps links another tab saved after this page showed the empty list", () => {
+    window.localStorage.setItem(STORAGE_KEY, "[]");
+    mount();
+    const other = [{ ...SEED[0], id: "other-tab", title: "Saved in another tab" }];
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(other)); // no storage event yet
+    press(button("Restore examples"));
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]").map((r: { id: string }) => r.id)).toEqual(["other-tab"]);
+  });
 });

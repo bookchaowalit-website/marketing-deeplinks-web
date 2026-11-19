@@ -239,7 +239,7 @@ export default function Home() {
                 <>
                   <strong>No links yet</strong>
                   Press New link to add the first one, or bring back the two examples.
-                  <div className="dl-empty-actions"><button type="button" className="as-plain" onClick={() => { store.set(SEED); setFilter("All"); }}>Restore examples</button></div>
+                  <div className="dl-empty-actions"><button type="button" className="as-plain" onClick={() => { store.update((latest) => (latest.length === 0 ? SEED : latest)); setFilter("All"); }}>Restore examples</button></div>
                 </>
               ) : (
                 <><strong>This list is empty</strong>No link is {title} yet. Press New link and pick {title} as the state to add one.</>
